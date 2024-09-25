@@ -24,7 +24,11 @@ Translator est un outil en ligne de commande puissant pour traduire des document
    ```
    cd translator
    ```
-4. Construisez l'application :
+4. Installez les dépendances
+   ```
+   go mod tidy
+   ```
+5. Construisez l'application :
    ```
    go build -o translator cmd/translator/main.go
    ```

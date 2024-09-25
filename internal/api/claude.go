@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/chrlesur/translator/pkg/tokenizer"
 )
 
 const (
-	ClaudeAPIURL = "https://api.anthropic.com/v1/chat"
+	ClaudeAPIURL = "https://api.anthropic.com/v1/messages"
 )
 
 type ClaudeClient struct {
@@ -20,8 +21,9 @@ type ClaudeClient struct {
 }
 
 type ClaudeRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
+	Model     string    `json:"model"`
+	Messages  []Message `json:"messages"`
+	MaxTokens int       `json:"max_tokens"`
 }
 
 type Message struct {
@@ -30,9 +32,16 @@ type Message struct {
 }
 
 type ClaudeResponse struct {
-	Choices []struct {
-		Message Message `json:"message"`
-	} `json:"choices"`
+	ID         string        `json:"id"`
+	Type       string        `json:"type"`
+	Role       string        `json:"role"`
+	Content    []ContentItem `json:"content"`
+	StopReason string        `json:"stop_reason"`
+}
+
+type ContentItem struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
 }
 
 func NewClaudeClient(apiKey string, debug bool) *ClaudeClient {
@@ -43,18 +52,23 @@ func NewClaudeClient(apiKey string, debug bool) *ClaudeClient {
 }
 
 func (c *ClaudeClient) Translate(content, targetLang string) (string, error) {
-	prompt := fmt.Sprintf("Translate the following text to %s:\n\n%s", targetLang, content)
+	prompt := fmt.Sprintf("Translate the following text to %s. Provide only the translation, without any additional comments or explanations:\n\n%s", targetLang, content)
 
 	request := ClaudeRequest{
-		Model: "claude-3-sonnet-20240229",
+		Model: "claude-3-5-sonnet-20240620",
 		Messages: []Message{
 			{Role: "user", Content: prompt},
 		},
+		MaxTokens: 8000, // Ajustez selon vos besoins
 	}
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
 		return "", fmt.Errorf("erreur lors de la création de la requête JSON : %w", err)
+	}
+
+	if c.Debug {
+		log.Printf("Requête à l'API Claude : %s", string(jsonData))
 	}
 
 	req, err := http.NewRequest("POST", ClaudeAPIURL, bytes.NewBuffer(jsonData))
@@ -64,6 +78,7 @@ func (c *ClaudeClient) Translate(content, targetLang string) (string, error) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-api-key", c.APIKey)
+	req.Header.Set("anthropic-version", "2023-06-01")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -77,8 +92,12 @@ func (c *ClaudeClient) Translate(content, targetLang string) (string, error) {
 		return "", fmt.Errorf("erreur lors de la lecture de la réponse : %w", err)
 	}
 
+	if c.Debug {
+		log.Printf("Réponse de l'API Claude : %s", string(body))
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("erreur de l'API Claude : %s", string(body))
+		return "", fmt.Errorf("erreur de l'API Claude (Status %d): %s", resp.StatusCode, string(body))
 	}
 
 	var claudeResp ClaudeResponse
@@ -87,11 +106,11 @@ func (c *ClaudeClient) Translate(content, targetLang string) (string, error) {
 		return "", fmt.Errorf("erreur lors du décodage de la réponse JSON : %w", err)
 	}
 
-	if len(claudeResp.Choices) == 0 {
-		return "", fmt.Errorf("aucune traduction reçue de l'API Claude")
+	if len(claudeResp.Content) == 0 {
+		return "", fmt.Errorf("aucun contenu reçu dans la réponse")
 	}
 
-	return claudeResp.Choices[0].Message.Content, nil
+	return claudeResp.Content[0].Text, nil
 }
 
 func (c *ClaudeClient) EstimateTranslationCost(content string) (float64, int, int) {

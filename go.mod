@@ -1,4 +1,4 @@
-module github.com/votreuser/translator
+module github.com/chrlesur/translator
 
 go 1.21
 

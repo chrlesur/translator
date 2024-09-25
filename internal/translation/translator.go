@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/chrlesur/translator/internal/api"
 	"github.com/chrlesur/translator/pkg/fileutils"
@@ -35,40 +34,13 @@ func (t *Translator) TranslateFile(sourceFile, targetLang string) error {
 		return fmt.Errorf("erreur lors de la lecture du fichier : %w", err)
 	}
 
-	preprocessed := t.MarkdownProcessor.PreprocessMarkdown(content)
-	batches := t.splitIntoBatches(preprocessed)
-
-	translatedBatches := make([]string, len(batches))
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, t.NumThreads)
-
-	for i, batch := range batches {
-		wg.Add(1)
-		go func(index int, batchContent string) {
-			defer wg.Done()
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-
-			translated, err := t.APIClient.Translate(batchContent, targetLang)
-			if err != nil {
-				fmt.Printf("Erreur lors de la traduction du lot %d : %v\n", index, err)
-				return
-			}
-			translatedBatches[index] = translated
-
-			if t.Debug {
-				fmt.Printf("Lot %d traduit avec succès\n", index)
-			}
-		}(i, batch)
+	translatedContent, err := t.TranslateText(content, targetLang)
+	if err != nil {
+		return fmt.Errorf("erreur lors de la traduction : %w", err)
 	}
 
-	wg.Wait()
-
-	translatedContent := strings.Join(translatedBatches, "")
-	postprocessed := t.MarkdownProcessor.PostprocessMarkdown(translatedContent)
-
-	outputFile := t.generateOutputFilename(sourceFile, targetLang)
-	err = fileutils.WriteFile(outputFile, postprocessed)
+	outputFile := t.GenerateOutputFilename(sourceFile, targetLang)
+	err = fileutils.WriteFile(outputFile, translatedContent)
 	if err != nil {
 		return fmt.Errorf("erreur lors de l'écriture du fichier traduit : %w", err)
 	}
@@ -79,33 +51,27 @@ func (t *Translator) TranslateFile(sourceFile, targetLang string) error {
 
 func (t *Translator) TranslateText(text, targetLang string) (string, error) {
 	if t.Debug {
-		fmt.Printf("Traduction du texte : %s\n", text)
+		fmt.Printf("Traduction du texte vers %s\n", targetLang)
 	}
 
-	preprocessed := t.MarkdownProcessor.PreprocessMarkdown(text)
-	translated, err := t.APIClient.Translate(preprocessed, targetLang)
-	if err != nil {
-		return "", fmt.Errorf("erreur lors de la traduction : %w", err)
-	}
+	segments := t.MarkdownProcessor.ProcessMarkdown(text)
 
-	postprocessed := t.MarkdownProcessor.PostprocessMarkdown(translated)
-	return postprocessed, nil
-}
-
-func (t *Translator) splitIntoBatches(content string) []string {
-	var batches []string
-	for len(content) > 0 {
-		batchSize := t.BatchSize
-		if batchSize > len(content) {
-			batchSize = len(content)
+	for i, segment := range segments {
+		if segment.Translatable && strings.TrimSpace(segment.Content) != "" {
+			translated, err := t.APIClient.Translate(segment.Content, targetLang)
+			if err != nil {
+				return "", fmt.Errorf("erreur lors de la traduction du segment %d : %w", i, err)
+			}
+			segments[i].Content = translated
 		}
-		batches = append(batches, content[:batchSize])
-		content = content[batchSize:]
 	}
-	return batches
+
+	translatedText := t.MarkdownProcessor.ReassembleMarkdown(segments)
+
+	return translatedText, nil
 }
 
-func (t *Translator) generateOutputFilename(sourceFile, targetLang string) string {
+func (t *Translator) GenerateOutputFilename(sourceFile, targetLang string) string {
 	dir, file := filepath.Split(sourceFile)
 	ext := filepath.Ext(file)
 	baseName := strings.TrimSuffix(file, ext)
