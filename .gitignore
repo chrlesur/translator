@@ -1,0 +1,28 @@
+# Binaires
+translator
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Fichiers de test
+*.test
+
+# Fichiers de sortie de couverture de code
+*.out
+
+# Dépendances
+/vendor/
+
+# Fichiers IDE
+.idea/
+*.swp
+*.swo
+.vscode/
+
+# Fichiers système
+.DS_Store
+
+# Fichiers d'environnement
+.env
