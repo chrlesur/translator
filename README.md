@@ -1,4 +1,3 @@
-Je m'excuse pour la confusion. Voici le README.md en Markdown pur, sans les backticks de formatage :
 
 # Translator
 
