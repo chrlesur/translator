@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"time"
 
-	"github.com/chrlesur/translator/pkg/tokenizer"
+	"github.com/chrlesur/translator/pkg/logger"
 )
 
 const (
@@ -32,16 +32,9 @@ type Message struct {
 }
 
 type ClaudeResponse struct {
-	ID         string        `json:"id"`
-	Type       string        `json:"type"`
-	Role       string        `json:"role"`
-	Content    []ContentItem `json:"content"`
-	StopReason string        `json:"stop_reason"`
-}
-
-type ContentItem struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
+	Content []struct {
+		Text string `json:"text"`
+	} `json:"content"`
 }
 
 func NewClaudeClient(apiKey string, debug bool) *ClaudeClient {
@@ -51,15 +44,32 @@ func NewClaudeClient(apiKey string, debug bool) *ClaudeClient {
 	}
 }
 
-func (c *ClaudeClient) Translate(content, targetLang string) (string, error) {
-	prompt := fmt.Sprintf("Translate the following text to %s. Provide only the translation, without any additional comments or explanations:\n\n%s", targetLang, content)
+func (c *ClaudeClient) Translate(content, sourceLang, targetLang string) (string, error) {
+	prompt := fmt.Sprintf(`You are a translation AI specializing in information technology content. Your task is to translate the following text from %s to %s.
+
+Important instructions:
+1. Translate the content accurately and professionally.
+2. Preserve all formatting, including line breaks and spacing.
+3. Do not translate URLs starting with http:// or https://.
+4. Do not translate content within square brackets [ ].
+5. Do not translate content between parentheses () immediately following a closing square bracket ].
+6. Do not translate markdown filenames with .md extension.
+7. Use academic language in your translation.
+8. Do not add any comments, introductions, or explanations to your translation.
+9. Provide only the translated text in your response, nothing else.
+
+Here's the text to translate:
+
+%s
+
+Remember, your response should contain only the translated text, with no additional comments or explanations.`, sourceLang, targetLang, content)
 
 	request := ClaudeRequest{
 		Model: "claude-3-5-sonnet-20240620",
 		Messages: []Message{
 			{Role: "user", Content: prompt},
 		},
-		MaxTokens: 8000, // Ajustez selon vos besoins
+		MaxTokens: 8000,
 	}
 
 	jsonData, err := json.Marshal(request)
@@ -67,59 +77,63 @@ func (c *ClaudeClient) Translate(content, targetLang string) (string, error) {
 		return "", fmt.Errorf("erreur lors de la création de la requête JSON : %w", err)
 	}
 
-	if c.Debug {
-		log.Printf("Requête à l'API Claude : %s", string(jsonData))
+	baseTimeout := 10 * time.Second
+	maxRetries := 5
+
+	for retry := 0; retry < maxRetries; retry++ {
+		timeout := baseTimeout + time.Duration(retry*20)*time.Second
+		client := &http.Client{
+			Timeout: timeout,
+		}
+
+		req, err := http.NewRequest("POST", ClaudeAPIURL, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return "", fmt.Errorf("erreur lors de la création de la requête HTTP : %w", err)
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("x-api-key", c.APIKey)
+		req.Header.Set("anthropic-version", "2023-06-01")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			if retry < maxRetries-1 {
+				logger.Debug(fmt.Sprintf("Tentative %d échouée. Timeout après %v. Nouvelle tentative...", retry+1, timeout))
+				continue
+			}
+			return "", fmt.Errorf("erreur lors de l'envoi de la requête à l'API Claude après %d tentatives : %w", maxRetries, err)
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("erreur lors de la lecture de la réponse : %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			if retry < maxRetries-1 {
+				logger.Debug(fmt.Sprintf("Tentative %d échouée. Statut HTTP : %d. Nouvelle tentative...", retry+1, resp.StatusCode))
+				continue
+			}
+			return "", fmt.Errorf("erreur de l'API Claude après %d tentatives. Dernier statut : %d, Corps : %s", maxRetries, resp.StatusCode, string(body))
+		}
+
+		if c.Debug {
+			logger.Debug(fmt.Sprintf("Réponse brute de l'API Claude : %s", string(body)))
+		}
+
+		var claudeResp ClaudeResponse
+		err = json.Unmarshal(body, &claudeResp)
+		if err != nil {
+			return "", fmt.Errorf("erreur lors du décodage de la réponse JSON : %w", err)
+		}
+
+		if len(claudeResp.Content) == 0 {
+			return "", fmt.Errorf("aucun contenu dans la réponse de l'API")
+		}
+
+		return claudeResp.Content[0].Text, nil
 	}
 
-	req, err := http.NewRequest("POST", ClaudeAPIURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("erreur lors de la création de la requête HTTP : %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", c.APIKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("erreur lors de l'envoi de la requête à l'API Claude : %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("erreur lors de la lecture de la réponse : %w", err)
-	}
-
-	if c.Debug {
-		log.Printf("Réponse de l'API Claude : %s", string(body))
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("erreur de l'API Claude (Status %d): %s", resp.StatusCode, string(body))
-	}
-
-	var claudeResp ClaudeResponse
-	err = json.Unmarshal(body, &claudeResp)
-	if err != nil {
-		return "", fmt.Errorf("erreur lors du décodage de la réponse JSON : %w", err)
-	}
-
-	if len(claudeResp.Content) == 0 {
-		return "", fmt.Errorf("aucun contenu reçu dans la réponse")
-	}
-
-	return claudeResp.Content[0].Text, nil
-}
-
-func (c *ClaudeClient) EstimateTranslationCost(content string) (float64, int, int) {
-	inputTokens, outputTokens := tokenizer.EstimateTokens(content)
-	totalTokens := inputTokens + outputTokens
-
-	// Prix pour Claude 3 Sonnet (à ajuster selon les tarifs réels)
-	const pricePerMillionTokens = 15.0 // $15 par million de tokens
-	cost := float64(totalTokens) * pricePerMillionTokens / 1000000.0
-
-	return cost, inputTokens, outputTokens
+	return "", fmt.Errorf("échec de la traduction après %d tentatives", maxRetries)
 }

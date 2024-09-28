@@ -112,12 +112,3 @@ Les contributions sont les bienvenues ! Veuillez suivre ces étapes :
 4. Poussez vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrez une Pull Request
 
-## Licence
-
-[Information sur la licence à venir]
-
-## Contact
-
-Votre Nom - votre@email.com
-
-Lien du projet : [https://github.com/votreuser/translator](https://github.com/votreuser/translator)
