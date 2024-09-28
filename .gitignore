@@ -1,7 +1,4 @@
 # Binaires
-translator
-*.exe
-*.exe~
 *.dll
 *.so
 *.dylib

@@ -17,6 +17,7 @@ const (
 
 type ClaudeClient struct {
 	APIKey string
+	Model  string
 	Debug  bool
 }
 
@@ -37,9 +38,13 @@ type ClaudeResponse struct {
 	} `json:"content"`
 }
 
-func NewClaudeClient(apiKey string, debug bool) *ClaudeClient {
+func NewClaudeClient(apiKey string, model string, debug bool) *ClaudeClient {
+	if model == "" {
+		model = "claude-3-5-sonnet-20240620" // Modèle par défaut
+	}
 	return &ClaudeClient{
 		APIKey: apiKey,
+		Model:  model,
 		Debug:  debug,
 	}
 }
@@ -65,8 +70,12 @@ Here's the text to translate:
 
 Remember, your response should contain only the translated text, with no additional comments or explanations.`, sourceLang, targetLang, additionalInstruction, content)
 
+	if c.Debug {
+		logger.Debug(fmt.Sprintf("Envoi de la requête à Claude. Modèle : %s, Prompt : %s", c.Model, prompt))
+	}
+
 	request := ClaudeRequest{
-		Model: "claude-3-5-sonnet-20240620",
+		Model: c.Model,
 		Messages: []Message{
 			{Role: "user", Content: prompt},
 		},
@@ -99,7 +108,9 @@ Remember, your response should contain only the translated text, with no additio
 		resp, err := client.Do(req)
 		if err != nil {
 			if retry < maxRetries-1 {
-				logger.Debug(fmt.Sprintf("Tentative %d échouée. Timeout après %v. Nouvelle tentative...", retry+1, timeout))
+				if c.Debug {
+					logger.Debug(fmt.Sprintf("Tentative %d échouée. Timeout après %v. Nouvelle tentative...", retry+1, timeout))
+				}
 				continue
 			}
 			return "", fmt.Errorf("erreur lors de l'envoi de la requête à l'API Claude après %d tentatives : %w", maxRetries, err)
@@ -111,16 +122,18 @@ Remember, your response should contain only the translated text, with no additio
 			return "", fmt.Errorf("erreur lors de la lecture de la réponse : %w", err)
 		}
 
+		if c.Debug {
+			logger.Debug(fmt.Sprintf("Réponse brute de l'API Claude : %s", string(body)))
+		}
+
 		if resp.StatusCode != http.StatusOK {
 			if retry < maxRetries-1 {
-				logger.Debug(fmt.Sprintf("Tentative %d échouée. Statut HTTP : %d. Nouvelle tentative...", retry+1, resp.StatusCode))
+				if c.Debug {
+					logger.Debug(fmt.Sprintf("Tentative %d échouée. Statut HTTP : %d. Nouvelle tentative...", retry+1, resp.StatusCode))
+				}
 				continue
 			}
 			return "", fmt.Errorf("erreur de l'API Claude après %d tentatives. Dernier statut : %d, Corps : %s", maxRetries, resp.StatusCode, string(body))
-		}
-
-		if c.Debug {
-			logger.Debug(fmt.Sprintf("Réponse brute de l'API Claude : %s", string(body)))
 		}
 
 		var claudeResp ClaudeResponse
@@ -131,6 +144,10 @@ Remember, your response should contain only the translated text, with no additio
 
 		if len(claudeResp.Content) == 0 {
 			return "", fmt.Errorf("aucun contenu dans la réponse de l'API")
+		}
+
+		if c.Debug {
+			logger.Debug(fmt.Sprintf("Contenu de la réponse Claude : %s", claudeResp.Content[0].Text))
 		}
 
 		return claudeResp.Content[0].Text, nil

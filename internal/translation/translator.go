@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/chrlesur/translator/internal/api"
 	"github.com/chrlesur/translator/pkg/fileutils"
 	"github.com/chrlesur/translator/pkg/logger"
 	"github.com/pkoukk/tiktoken-go"
@@ -20,8 +19,12 @@ const (
 	maxBatchTokens    = 2000 // Nombre maximum de tokens par lot
 )
 
+type TranslationClient interface {
+	Translate(content, sourceLang, targetLang, additionalInstruction string) (string, error)
+}
+
 type Translator struct {
-	APIClient             *api.ClaudeClient
+	Client                TranslationClient
 	BatchSize             int
 	NumThreads            int
 	Debug                 bool
@@ -37,12 +40,12 @@ type BatchStatus struct {
 	ErrorOccurred bool
 }
 
-func NewTranslator(apiClient *api.ClaudeClient, batchSize, numThreads int, debug bool, sourceLang, additionalInstruction string) *Translator {
+func NewTranslator(client TranslationClient, batchSize, numThreads int, debug bool, sourceLang, additionalInstruction string) *Translator {
 	if sourceLang == "" {
 		sourceLang = "français" // Langue source par défaut
 	}
 	return &Translator{
-		APIClient:             apiClient,
+		Client:                client,
 		BatchSize:             batchSize,
 		NumThreads:            numThreads,
 		Debug:                 debug,
@@ -158,8 +161,7 @@ func (t *Translator) processSingleBatch(index int, batchContent, targetLang stri
 	status.InputTokens = inputTokens
 	status.Status = "Envoyé au LLM"
 
-	translated, err := t.APIClient.Translate(batchContent, t.SourceLang, targetLang, t.AdditionalInstruction)
-
+	translated, err := t.Client.Translate(batchContent, t.SourceLang, targetLang, t.AdditionalInstruction)
 	if err != nil {
 		logger.Error(fmt.Sprintf("Erreur lors de la traduction du lot %d : %v", index+1, err))
 		status.Status = "Erreur"
@@ -357,7 +359,7 @@ func (t *Translator) TranslateText(text, targetLang string) (string, error) {
 		logger.Debug(fmt.Sprintf("Traduction du texte : %s", text))
 	}
 
-	translated, err := t.APIClient.Translate(text, t.SourceLang, targetLang, t.AdditionalInstruction)
+	translated, err := t.Client.Translate(text, t.SourceLang, targetLang, t.AdditionalInstruction)
 	if err != nil {
 		return "", fmt.Errorf("erreur lors de la traduction : %w", err)
 	}
