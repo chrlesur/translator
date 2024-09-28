@@ -44,7 +44,7 @@ func NewClaudeClient(apiKey string, debug bool) *ClaudeClient {
 	}
 }
 
-func (c *ClaudeClient) Translate(content, sourceLang, targetLang string) (string, error) {
+func (c *ClaudeClient) Translate(content, sourceLang, targetLang, additionalInstruction string) (string, error) {
 	prompt := fmt.Sprintf(`You are a translation AI specializing in information technology content. Your task is to translate the following text from %s to %s.
 
 Important instructions:
@@ -57,12 +57,13 @@ Important instructions:
 7. Use academic language in your translation.
 8. Do not add any comments, introductions, or explanations to your translation.
 9. Provide only the translated text in your response, nothing else.
+%s
 
 Here's the text to translate:
 
 %s
 
-Remember, your response should contain only the translated text, with no additional comments or explanations.`, sourceLang, targetLang, content)
+Remember, your response should contain only the translated text, with no additional comments or explanations.`, sourceLang, targetLang, additionalInstruction, content)
 
 	request := ClaudeRequest{
 		Model: "claude-3-5-sonnet-20240620",
