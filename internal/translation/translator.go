@@ -276,7 +276,7 @@ func splitIntoSentences(text string) []string {
 
 func isAbbreviation(s string) bool {
 	// This is a simple check. You might want to expand this list or use a more sophisticated method
-	abbreviations := []string{"Mr.", "Mrs.", "Dr.", "Prof.", "Sr.", "Jr.", "U.S.A.", "U.K.", "i.e.", "e.g."}
+	abbreviations := []string{"Mr.", "Mrs.", "Dr.", "M.", "Prof.", "Sr.", "Jr.", "U.S.A.", "U.K.", "i.e.", "e.g."}
 	for _, abbr := range abbreviations {
 		if strings.HasSuffix(s, abbr) {
 			return true

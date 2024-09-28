@@ -16,9 +16,10 @@ const (
 )
 
 type ClaudeClient struct {
-	APIKey string
-	Model  string
-	Debug  bool
+	APIKey      string
+	Model       string
+	Debug       bool
+	ContextSize int
 }
 
 type ClaudeRequest struct {
@@ -38,14 +39,18 @@ type ClaudeResponse struct {
 	} `json:"content"`
 }
 
-func NewClaudeClient(apiKey string, model string, debug bool) *ClaudeClient {
+func NewClaudeClient(apiKey, model string, debug bool, contextSize int) *ClaudeClient {
 	if model == "" {
 		model = "claude-3-5-sonnet-20240620" // Modèle par défaut
 	}
+	if contextSize <= 0 {
+		contextSize = 4000 // Valeur par défaut si non spécifié
+	}
 	return &ClaudeClient{
-		APIKey: apiKey,
-		Model:  model,
-		Debug:  debug,
+		APIKey:      apiKey,
+		Model:       model,
+		Debug:       debug,
+		ContextSize: contextSize,
 	}
 }
 

@@ -10,19 +10,24 @@ import (
 )
 
 type OpenAIClient struct {
-	client *openai.Client
-	model  string
-	debug  bool
+	client      *openai.Client
+	model       string
+	debug       bool
+	contextSize int
 }
 
-func NewOpenAIClient(apiKey, model string, debug bool) *OpenAIClient {
+func NewOpenAIClient(apiKey, model string, debug bool, contextSize int) *OpenAIClient {
 	if model == "" {
-		model = "gpt-4o-mini" // Modèle par défaut
+		model = "gpt-4o" // Modèle par défaut
+	}
+	if contextSize <= 0 {
+		contextSize = 4000 // Valeur par défaut si non spécifié
 	}
 	return &OpenAIClient{
-		client: openai.NewClient(apiKey),
-		model:  model,
-		debug:  debug,
+		client:      openai.NewClient(apiKey),
+		model:       model,
+		debug:       debug,
+		contextSize: contextSize,
 	}
 }
 

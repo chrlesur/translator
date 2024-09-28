@@ -24,6 +24,7 @@ var (
 	model                 string
 	ollamaHost            string
 	ollamaPort            string
+	contextSize           int
 )
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&model, "model", "m", "claude-3-5-sonnet-20240620", "Modèle spécifique à utiliser pour le moteur choisi")
 	rootCmd.PersistentFlags().StringVar(&ollamaHost, "ollama-host", "localhost", "Hôte Ollama")
 	rootCmd.PersistentFlags().StringVar(&ollamaPort, "ollama-port", "11434", "Port Ollama")
+	rootCmd.PersistentFlags().IntVarP(&contextSize, "context-size", "c", 0, "Taille du contexte pour le modèle (0 pour utiliser la valeur par défaut)")
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(translateCmd)
@@ -47,10 +49,7 @@ var rootCmd = &cobra.Command{
 	Use:   "translator",
 	Short: "Translator est un outil de traduction de documents utilisant divers moteurs d'IA",
 	Long: `Translator est un outil en ligne de commande pour traduire des documents texte, 
-principalement en format Markdown, en utilisant différents moteurs d'IA comme Claude, GPT-4, ou Ollama.
-Utilisez le flag --model pour spécifier un modèle particulier pour le moteur choisi.
-Le paramètre 'batch-size' définit le nombre cible de tokens par lot, mais la taille réelle peut varier 
-pour respecter la structure du texte et les limites de l'API.`,
+principalement en format Markdown, en utilisant différents moteurs d'IA comme Claude, GPT-4, ou Ollama.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logger.SetDebugMode(debug)
 		logger.Info(fmt.Sprintf("Translator version %s", VERSION))
@@ -137,7 +136,7 @@ func getTranslationClient() translation.TranslationClient {
 			return nil
 		}
 		logger.Debug(fmt.Sprintf("Utilisation du moteur Anthropic avec la clé API : %s", apiKey[:5]+"..."))
-		return api.NewClaudeClient(apiKey, model, debug)
+		return api.NewClaudeClient(apiKey, model, debug, getContextSize("anthropic"))
 	case "openai":
 		apiKey := os.Getenv("OPENAI_API_KEY")
 		if apiKey == "" {
@@ -146,13 +145,27 @@ func getTranslationClient() translation.TranslationClient {
 		}
 		logger.Debug(fmt.Sprintf("Utilisation du moteur OpenAI avec la clé API : %s", apiKey[:5]+"..."))
 		logger.Debug(fmt.Sprintf("Modèle sélectionné : %s", model))
-		return api.NewOpenAIClient(apiKey, model, debug)
+		return api.NewOpenAIClient(apiKey, model, debug, getContextSize("openai"))
 	case "ollama":
 		logger.Debug(fmt.Sprintf("Utilisation d'Ollama avec l'hôte %s et le port %s", ollamaHost, ollamaPort))
-		return api.NewOllamaClient(ollamaHost, ollamaPort, model, debug)
+		return api.NewOllamaClient(ollamaHost, ollamaPort, model, debug, getContextSize("ollama"))
 	default:
 		logger.Error(fmt.Sprintf("Moteur non reconnu : %s", engine))
 		return nil
+	}
+}
+
+func getContextSize(engineType string) int {
+	if contextSize > 0 {
+		return contextSize
+	}
+	switch engineType {
+	case "anthropic", "openai":
+		return 4000
+	case "ollama":
+		return 2000
+	default:
+		return 2000
 	}
 }
 
