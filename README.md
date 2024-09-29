@@ -12,9 +12,91 @@ Translator est un outil en ligne de commande puissant pour traduire des document
 
 ## Installation
 
+### Prérequis
+
+Avant d'installer Translator, assurez-vous d'avoir Go installé sur votre système. Translator nécessite Go 1.16 ou une version ultérieure.
+
+Pour vérifier votre version de Go, exécutez :
 ```
-go get github.com/chrlesur/translator
+go version
 ```
+
+Si Go n'est pas installé, vous pouvez le télécharger et l'installer depuis [le site officiel de Go](https://golang.org/dl/).
+
+### Installation depuis les sources
+
+Pour installer Translator, suivez ces étapes :
+
+1. Clonez le dépôt :
+   ```
+   git clone https://github.com/chrlesur/translator.git
+   ```
+
+2. Naviguez dans le répertoire du projet :
+   ```
+   cd translator
+   ```
+
+3. Compilez et installez le projet :
+   ```
+   go install
+   ```
+
+Cette commande compilera le projet et placera l'exécutable dans votre `GOPATH/bin`.
+
+### Configuration spécifique à chaque système d'exploitation
+
+#### Windows
+
+Assurez-vous que votre `GOPATH/bin` est dans votre PATH. Vous pouvez l'ajouter en exécutant cette commande dans PowerShell :
+```
+$env:Path += ";$env:GOPATH\bin"
+```
+Pour rendre ce changement permanent, ajoutez-le à votre profil PowerShell ou aux variables d'environnement du système.
+
+#### Linux et macOS
+
+Ajoutez la ligne suivante à votre fichier `.bashrc`, `.zshrc` ou équivalent :
+```
+export PATH=$PATH:$(go env GOPATH)/bin
+```
+Puis rechargez votre configuration de shell :
+```
+source ~/.bashrc  # ou ~/.zshrc, selon votre shell
+```
+
+### Vérification de l'installation
+
+Pour vérifier que Translator est correctement installé, exécutez :
+```
+translator --version
+```
+
+Cela devrait afficher la version actuelle de Translator.
+
+### Mise à jour
+
+Pour mettre à jour Translator vers la dernière version, naviguez dans le répertoire du projet et exécutez :
+```
+git pull
+go install
+```
+
+### Utilisation sans installation
+
+Si vous préférez ne pas installer Translator globalement, vous pouvez le compiler et l'exécuter directement depuis le répertoire du projet :
+
+1. Naviguez dans le répertoire du projet
+2. Compilez le projet :
+   ```
+   go build -o translator cmd/translator/main.go
+   ```
+3. Exécutez le programme compilé :
+   ```
+   ./translator [commandes et options]
+   ```
+
+Cette méthode créera un exécutable nommé `translator` (ou `translator.exe` sur Windows) dans le répertoire courant.
 
 ## Utilisation
 
