@@ -69,7 +69,7 @@ source ~/.bashrc  # ou ~/.zshrc, selon votre shell
 
 Pour vérifier que Translator est correctement installé, exécutez :
 ```
-translator --version
+translator version
 ```
 
 Cela devrait afficher la version actuelle de Translator.
@@ -103,19 +103,19 @@ Cette méthode créera un exécutable nommé `translator` (ou `translator.exe` s
 ### Traduction de fichier
 
 ```
-translator translate input.md EN --engine anthropic --model claude-3-sonnet-20240229
+translator translate input.md EN --engine "anthropic" --model "claude-3-sonnet-20240229"
 ```
 
 ### Mode interactif
 
 ```
-translator interactive --engine openai --model "gpt-4"
+translator interactive --engine "openai" --model "gpt-4"
 ```
 
 ### Test de l'API
 
 ```
-translator test-api --engine anthropic --model "claude-3-5-sonnet-20240620"
+translator test-api --engine "anthropic" --model "claude-3-5-sonnet-20240620"
 ```
 
 ## Options
