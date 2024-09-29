@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const VERSION = "1.0.0"
+const VERSION = "1.1.0-Beta"
 
 var (
 	debug                 bool
@@ -25,6 +25,7 @@ var (
 	ollamaHost            string
 	ollamaPort            string
 	contextSize           int
+	aiyouAssistantID      string
 )
 
 func init() {
@@ -33,11 +34,12 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&numThreads, "threads", "t", 4, "Nombre de threads pour le traitement parallèle")
 	rootCmd.PersistentFlags().StringVarP(&sourceLang, "source-lang", "s", "français", "Langue source du texte à traduire")
 	rootCmd.PersistentFlags().StringVarP(&additionalInstruction, "instruction", "i", "", "Instruction complémentaire pour la traduction")
-	rootCmd.PersistentFlags().StringVarP(&engine, "engine", "e", "anthropic", "Moteur de traduction (anthropic, openai, ollama)")
+	rootCmd.PersistentFlags().StringVarP(&engine, "engine", "e", "anthropic", "Moteur de traduction (anthropic, openai, ollama, aiyou)")
 	rootCmd.PersistentFlags().StringVarP(&model, "model", "m", "claude-3-5-sonnet-20240620", "Modèle spécifique à utiliser pour le moteur choisi")
 	rootCmd.PersistentFlags().StringVar(&ollamaHost, "ollama-host", "localhost", "Hôte Ollama")
 	rootCmd.PersistentFlags().StringVar(&ollamaPort, "ollama-port", "11434", "Port Ollama")
 	rootCmd.PersistentFlags().IntVarP(&contextSize, "context-size", "c", 0, "Taille du contexte pour le modèle (0 pour utiliser la valeur par défaut)")
+	rootCmd.PersistentFlags().StringVarP(&aiyouAssistantID, "aiyou-assistant-id", "A", "", "ID de l'assistant AI.YOU")
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(translateCmd)
@@ -49,7 +51,7 @@ var rootCmd = &cobra.Command{
 	Use:   "translator",
 	Short: "Translator est un outil de traduction de documents utilisant divers moteurs d'IA",
 	Long: `Translator est un outil en ligne de commande pour traduire des documents texte, 
-principalement en format Markdown, en utilisant différents moteurs d'IA comme Claude, GPT-4, ou Ollama.`,
+principalement en format Markdown, en utilisant différents moteurs d'IA comme Claude, GPT-4, Ollama ou AI.YOU.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		logger.SetDebugMode(debug)
 		logger.Info(fmt.Sprintf("Translator version %s", VERSION))
@@ -151,6 +153,25 @@ func getTranslationClient() translation.TranslationClient {
 	case "ollama":
 		logger.Debug(fmt.Sprintf("Utilisation d'Ollama avec l'hôte %s et le port %s", ollamaHost, ollamaPort))
 		return api.NewOllamaClient(ollamaHost, ollamaPort, model, debug, getContextSize("ollama"))
+	case "aiyou":
+		aiyouEmail := os.Getenv("AIYOU_EMAIL")
+		aiyouPassword := os.Getenv("AIYOU_PASSWORD")
+		if aiyouEmail == "" || aiyouPassword == "" {
+			logger.Error("L'email ou le mot de passe AI.YOU n'est pas défini dans le fichier .env")
+			return nil
+		}
+		if aiyouAssistantID == "" {
+			logger.Error("L'ID de l'assistant AI.YOU n'est pas spécifié")
+			return nil
+		}
+		logger.Debug(fmt.Sprintf("Utilisation du moteur AI.YOU avec l'email : %s", aiyouEmail))
+		client := api.NewAIYOUClient(aiyouAssistantID, debug)
+		err := client.Login(aiyouEmail, aiyouPassword)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Erreur lors de la connexion à AI.YOU : %v", err))
+			return nil
+		}
+		return client
 	default:
 		logger.Error(fmt.Sprintf("Moteur non reconnu : %s", engine))
 		return nil
@@ -164,7 +185,7 @@ func getContextSize(engineType string) int {
 	switch engineType {
 	case "anthropic", "openai":
 		return 4000
-	case "ollama":
+	case "ollama", "aiyou":
 		return 2000
 	default:
 		return 2000

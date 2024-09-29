@@ -1,10 +1,14 @@
 # Translator
 
-Translator est un outil en ligne de commande puissant pour traduire des documents texte, principalement en format Markdown, en utilisant différents moteurs d'IA tels que Claude, GPT-4, ou Ollama.
+Translator est un outil en ligne de commande puissant pour traduire des documents texte, principalement en format Markdown, en utilisant différents moteurs d'IA tels que Claude, GPT-4, Ollama, ou AI.YOU.
+
+## Version actuelle
+
+Version : 1.1.0 Beta 
 
 ## Caractéristiques
 
-- Support de multiples moteurs d'IA : Anthropic Claude, OpenAI GPT, et Ollama
+- Support de multiples moteurs d'IA : Anthropic Claude, OpenAI GPT, Ollama, et AI.YOU
 - Traduction de fichiers entiers ou mode interactif pour des traductions rapides
 - Préservation du formatage, y compris les sauts de ligne et l'espacement
 - Gestion intelligente des lots pour optimiser les performances et respecter les limites des API
@@ -81,6 +85,15 @@ Pour mettre à jour Translator vers la dernière version, naviguez dans le répe
 git pull
 go install ./cmd/translator
 ```
+## Configuration
+
+Créez un fichier `.env` à la racine du projet avec les informations d'authentification nécessaires :
+```
+CLAUDE_API_KEY=votre_clé_claude
+OPENAI_API_KEY=votre_clé_openai
+AIYOU_EMAIL=votre_email_aiyou
+AIYOU_PASSWORD=votre_mot_de_passe_aiyou
+```
 
 ### Utilisation sans installation
 
@@ -105,6 +118,12 @@ Cette méthode créera un exécutable nommé `translator` (ou `translator.exe` s
 ```
 translator translate input.md EN --engine "anthropic" --model "claude-3-sonnet-20240229"
 ```
+### Utilisation d'AI.YOU
+
+Pour utiliser AI.YOU, **vous devez spécifier l'ID de l'assistant lors de l'exécution de la commande** :
+```
+translator translate input.md EN --engine aiyou -A votre_id_assistant
+```
 
 ### Mode interactif
 
@@ -125,10 +144,13 @@ translator test-api --engine "anthropic" --model "claude-3-5-sonnet-20240620"
 - `-t, --threads` : Nombre de threads pour le traitement parallèle (défaut: 4)
 - `-s, --source-lang` : Langue source du texte à traduire (défaut: français)
 - `-i, --instruction` : Instruction complémentaire pour la traduction
-- `-e, --engine` : Moteur de traduction (anthropic, openai, ollama)
+- `-e, --engine` : Moteur de traduction (anthropic, openai, ollama, aiyou)
 - `-m, --model` : Modèle spécifique à utiliser pour le moteur choisi
+- `-A, --aiyou-assistant-id` : ID de l'assistant AI.YOU (requis pour le moteur aiyou)
 - `--ollama-host` : Hôte Ollama (défaut: localhost)
 - `--ollama-port` : Port Ollama (défaut: 11434)
+- `-c, --context-size` : Taille du contexte pour le modèle (0 pour utiliser la valeur par défaut)
+
 
 ## Configuration
 
