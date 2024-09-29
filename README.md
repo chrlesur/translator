@@ -39,7 +39,7 @@ Pour installer Translator, suivez ces étapes :
 
 3. Compilez et installez le projet :
    ```
-   go install
+   go install ./cmd/translator
    ```
 
 Cette commande compilera le projet et placera l'exécutable dans votre `GOPATH/bin`.
@@ -79,7 +79,7 @@ Cela devrait afficher la version actuelle de Translator.
 Pour mettre à jour Translator vers la dernière version, naviguez dans le répertoire du projet et exécutez :
 ```
 git pull
-go install
+go install ./cmd/translator
 ```
 
 ### Utilisation sans installation
@@ -89,7 +89,7 @@ Si vous préférez ne pas installer Translator globalement, vous pouvez le compi
 1. Naviguez dans le répertoire du projet
 2. Compilez le projet :
    ```
-   go build -o translator cmd/translator/main.go
+   go build -o translator ./cmd/translator
    ```
 3. Exécutez le programme compilé :
    ```
