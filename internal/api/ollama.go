@@ -36,7 +36,6 @@ func NewOllamaClient(host, port, model string, debug bool, contextSize int) *Oll
 
 func (c *OllamaClient) Translate(content, sourceLang, targetLang, additionalInstruction string) (string, error) {
 	prompt := fmt.Sprintf(`Translate the following text from %s to %s. Follow these rules strictly:
-
 1. Translate accurately and professionally.
 2. Preserve all formatting, including line breaks and spacing.
 3. Do not translate URLs starting with http:// or https://.
@@ -48,11 +47,9 @@ func (c *OllamaClient) Translate(content, sourceLang, targetLang, additionalInst
 9. Your response must contain only the translated text, nothing else.
 %s
 
-Text to translate:
+Translate the above text now:
 
-%s
-
-Translate the above text now:`, sourceLang, targetLang, additionalInstruction, content)
+%s`, sourceLang, targetLang, additionalInstruction, content)
 
 	if c.debug {
 		logger.Debug(fmt.Sprintf("Envoi de la requête à Ollama. Prompt : %s", prompt))

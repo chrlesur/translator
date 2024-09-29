@@ -1,4 +1,3 @@
-
 # Translator
 
 Translator est un outil en ligne de commande puissant pour traduire des documents texte, principalement en format Markdown, en utilisant différents moteurs d'IA tels que Claude, GPT-4, ou Ollama.
@@ -67,6 +66,55 @@ Pour contribuer au projet :
 3. Committez vos changements (`git commit -m 'Add some AmazingFeature'`)
 4. Poussez vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrez une Pull Request
+
+## Structure du projet
+
+```
+translator/
+│
+├── cmd/
+│   └── translator/
+│       └── main.go
+│
+├── internal/
+│   ├── api/
+│   │   ├── claude.go
+│   │   ├── openai.go
+│   │   └── ollama.go
+│   │
+│   ├── cli/
+│   │   └── interactive.go
+│   │
+│   └── translation/
+│       ├── translator.go
+│       ├── utils.go
+│       └── language-codes.go
+│
+├── pkg/
+│   ├── fileutils/
+│   │   └── fileutils.go
+│   │
+│   └── logger/
+│       └── logger.go
+│
+├── .env
+├── go.mod
+├── go.sum
+├── LICENSE
+└── README.md
+```
+
+## Fonctionnement interne
+
+Le traducteur fonctionne en plusieurs étapes :
+
+1. Lecture du fichier d'entrée
+2. Segmentation du contenu en lots gérables
+3. Traduction parallèle des lots
+4. Assemblage des traductions
+5. Écriture du fichier de sortie
+
+Le processus utilise un système de tokens pour optimiser l'utilisation des API de traduction et respecter leurs limites.
 
 ## Licence
 

@@ -170,8 +170,14 @@ func getContextSize(engineType string) int {
 }
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
-		logger.Error(fmt.Sprintf("Erreur : %v", err))
-		os.Exit(1)
-	}
+    if err := godotenv.Load(); err != nil {
+        logger.Error("Erreur lors du chargement du fichier .env")
+    }
+    logger.Info("Fichier .env chargé")
+
+    if err := rootCmd.Execute(); err != nil {
+        logger.Error(fmt.Sprintf("Erreur lors de l'exécution de la commande : %v", err))
+        os.Exit(1)
+    }
+    logger.Info("Commande exécutée avec succès")
 }
