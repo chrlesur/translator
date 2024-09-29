@@ -122,7 +122,7 @@ translator translate input.md EN --engine "anthropic" --model "claude-3-sonnet-2
 
 Pour utiliser AI.YOU, **vous devez spécifier l'ID de l'assistant lors de l'exécution de la commande** :
 ```
-translator translate input.md EN --engine aiyou -A votre_id_assistant
+translator translate input.md EN --engine "aiyou" -A "votre_id_assistant"
 ```
 
 ### Mode interactif
@@ -151,15 +151,6 @@ translator test-api --engine "anthropic" --model "claude-3-5-sonnet-20240620"
 - `--ollama-port` : Port Ollama (défaut: 11434)
 - `-c, --context-size` : Taille du contexte pour le modèle (0 pour utiliser la valeur par défaut)
 
-
-## Configuration
-
-Créez un fichier `.env` à la racine du projet avec les clés API nécessaires :
-
-```
-CLAUDE_API_KEY=votre_clé_claude
-OPENAI_API_KEY=votre_clé_openai
-```
 
 ## Développement
 
